@@ -31,6 +31,11 @@ init_population <- function( object )
 fitness <- function( path )
 {
   pos <- start
+  nrow <- dim( maze ) [1]
+  ncol <- dim( maze ) [2]
+  path_map <- matrix(FALSE, nrow, ncol)
+  path_map[ pos[['row']],  pos[['col']] ] <- TRUE
+  
   for (move in path) {
     
     # TODO:
@@ -38,14 +43,37 @@ fitness <- function( path )
     #  2) Check if moving in circles?
     
     if (move == 1)
+    {
       pos['col'] <- pos['col'] + 1
+      
+    }
     else if (move == 2)
+    {
       pos['row'] <- pos['row'] - 1
+      
+    }
     else if (move == 3)
+    {
       pos['col'] <- pos['col'] - 1
+      
+    }
     else if (move == 4)
+    {
       pos['row'] <- pos['row'] + 1
+    }
+    
+    if (0 <= pos[['col']] && pos[['col']] <= ncol && 0 <= pos[['row']] && pos[['row']] <= nrow)
+    {
+      path_map[ pos[['row']],  pos[['col']] ] <- TRUE
+    }
+    else
+      return(NULL)
   }
+  
+  
+  
+  return(path_map)
+  
 }
 
 
@@ -55,3 +83,4 @@ fitness <- function( path )
 #  3 - left
 #  4 - down
 GA <- ga(type = "real-valued", fitness = fitness, lower = rep(1, max_path_length), upper = rep(5, max_path_length), population = init_population, popSize = 10, maxiter=10, pmutation = 0, pcrossover = 0)
+
