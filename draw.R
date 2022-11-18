@@ -58,7 +58,7 @@ draw_path <- function( maze, path )
 
 
 # Monitor for displaying best path during execution of genetic algorithm
-ga_maze_monitor <- function( GA, maze, update_rate = 10, console = TRUE )
+ga_maze_monitor <- function( GA, maze, update_rate = 10, sleep = 0.1, console = TRUE )
 {
   fitness <- na.exclude(GA@fitness)
   best_fitness <- max(fitness)
@@ -69,7 +69,7 @@ ga_maze_monitor <- function( GA, maze, update_rate = 10, console = TRUE )
     draw_path( maze, best_path )
     title <- paste( "Iteration = ", GA@iter, ", Fitness = ", best_fitness, sep = "" )
     grid.edit( "title", label = title)
-    Sys.sleep( 0.1 )
+    Sys.sleep( sleep )
   }
   
   # Also print to console if specified
