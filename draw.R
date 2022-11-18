@@ -58,16 +58,26 @@ draw_path <- function( maze, path )
 
 
 # Monitor for displaying best path during execution of genetic algorithm
-ga_maze_monitor <- function( GA, maze )
+ga_maze_monitor <- function( GA, maze, update_rate = 10, console = TRUE )
 {
   fitness <- na.exclude(GA@fitness)
-  
   best_fitness <- max(fitness)
   best_path <- GA@population[which.max(fitness),]
-
-  draw_path( maze, best_path )
-  title <- paste( "Iteration = ", GA@iter, ", Fitness = ", best_fitness, sep = "" )
-  grid.edit( "title", label = title)
   
-  Sys.sleep( 0.1 )
+  # Draw new path and update plot title every `update_rate` iterations
+  if (GA@iter %% update_rate == 0) {
+    draw_path( maze, best_path )
+    title <- paste( "Iteration = ", GA@iter, ", Fitness = ", best_fitness, sep = "" )
+    grid.edit( "title", label = title)
+    Sys.sleep( 0.1 )
+  }
+  
+  # Also print to console if specified
+  if (console) {
+    sumryStat <- c(mean(fitness), max(fitness))
+    sumryStat <- format(sumryStat, digits = getOption("digits"))
+    cat(paste("GA | iter =", GA@iter, "| Mean =", sumryStat[1], "| Best =", sumryStat[2]))
+    cat("\n")
+    flush.console()
+  }
 }

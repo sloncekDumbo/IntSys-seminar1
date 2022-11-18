@@ -76,7 +76,7 @@ fitness <- function( path, maze )
 
 
 # Read maze
-maze <- maze_to_matrix( maze1 )
+maze <- maze_to_matrix( maze2 )
 max_path_length <- nrow( maze ) * ncol( maze )
 draw_maze( maze )
 
@@ -85,11 +85,11 @@ GA <- ga(type = "real-valued",
          fitness = function(path) fitness(path, maze ),
          lower = rep(1, max_path_length),
          upper = rep(5, max_path_length),
-         popSize = 1000,
-         maxiter = 100,
+         popSize = 100,
+         maxiter = 1000,
          elitism = 0,
-         pmutation = 0.5,
-         pcrossover = 0.5,
+         pmutation = 1,
+         pcrossover = 1,
          monitor = function(obj) ga_maze_monitor(obj, maze))
 
 plot( GA )
