@@ -70,6 +70,7 @@ decode_path <- function( maze, path )
       break
       
     } else if (curr == 'E') {
+      visited[pos['row'], pos['col']] <- TRUE
       found_path <- TRUE
       break
     }

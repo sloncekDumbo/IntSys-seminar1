@@ -40,7 +40,7 @@ draw_maze <- function( maze )
 
 
 # Draws a path on existing maze image
-draw_path <- function( maze, path )
+draw_path <- function( maze, path, opacity = 0.5 )
 {
   h <- nrow( maze )
   w <- ncol( maze )
@@ -52,13 +52,12 @@ draw_path <- function( maze, path )
   y <- h + 1 - coords$y
   
   # Remove old path and draw new one
-  grid.remove( "path", global = TRUE, warn = FALSE )
-  grid.rect( (x-1)/w, (y-1)/h, 1/w, 1/h, just = c("left", "bottom"), gp = gpar( fill = "steelblue", alpha = 0.5 ), name = "path" )
+  grid.rect( (x-1)/w, (y-1)/h, 1/w, 1/h, just = c("left", "bottom"), gp = gpar( fill = "steelblue", alpha = opacity ), name = "path" )
 }
 
 
 # Monitor for displaying best path during execution of genetic algorithm
-ga_maze_monitor <- function( GA, maze, update_rate = 10, sleep = 0.1, console = TRUE )
+ga_maze_monitor <- function( GA, maze, update_rate = 10, sleep = 0.1, console = TRUE, draw_all = FALSE, opacity = 0.5 )
 {
   fitness <- na.exclude(GA@fitness)
   best_fitness <- max(fitness)
@@ -66,7 +65,15 @@ ga_maze_monitor <- function( GA, maze, update_rate = 10, sleep = 0.1, console = 
   
   # Draw new path and update plot title every `update_rate` iterations
   if (GA@iter %% update_rate == 0) {
-    draw_path( maze, best_path )
+    grid.remove( "path", global = TRUE, warn = FALSE )
+    if (draw_all) {
+      for (i in 1:nrow(GA@population)) {
+        draw_path( maze, GA@population[i,], opacity = opacity )
+      }
+    } else {
+      draw_path( maze, best_path, opacity = opacity )
+    }
+    
     title <- paste( "Iteration = ", GA@iter, ", Fitness = ", best_fitness, sep = "" )
     grid.edit( "title", label = title)
     Sys.sleep( sleep )
