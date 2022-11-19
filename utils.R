@@ -20,11 +20,21 @@ decode_path <- function( maze, path )
   res <- c()
   pos <- start
   path <- as.integer( path )
+  visited <- matrix( FALSE, nrow(maze), ncol(maze) )
   
   found_path <- FALSE
   hit_wall <- FALSE
   
   for (move in path) {
+    
+    # Path is only valid until backtracking starts
+    if (visited[pos['row'], pos['col']]) {
+      res <- res[1:length(res)-1]
+      xs <- xs[1:length(xs)-1]
+      ys <- ys[1:length(ys)-1]
+      break
+    }
+    visited[pos['row'], pos['col']] <- TRUE
     
     # Make a move
     if (move == 1) {    # Right
@@ -47,20 +57,19 @@ decode_path <- function( maze, path )
       pos['row'] <- pos['row'] + 1
     }
     
+    # Store coordinates for drawing maze
     xs <- c(xs, pos['col'])
     ys <- c(ys, pos['row'])
     
     # Check current position
-    curr <- '#'  # Wall by default - for out of bounds cases
-    if (1 <= pos['col'] && pos['col'] <= ncol(maze) && 1 <= pos['row'] && pos['row'] <= nrow(maze)) {
-      curr <- maze[pos['row'], pos['col']]
-    }
+    in_bounds <- 1 <= pos['col'] && pos['col'] <= ncol(maze) && 1 <= pos['row'] && pos['row'] <= nrow(maze)
+    curr <- if (in_bounds) maze[pos['row'], pos['col']] else '#'
     
     if (curr == '#') {
       hit_wall <- TRUE
       break
-    }
-    else if (curr == 'E') {
+      
+    } else if (curr == 'E') {
       found_path <- TRUE
       break
     }
@@ -71,6 +80,7 @@ decode_path <- function( maze, path )
     "found" = found_path,
     "wall" = hit_wall,
     "path" = res,
+    "visited" = visited,
     "coords" = list( "x" = xs, "y" = ys )
   )
   return( ret )
