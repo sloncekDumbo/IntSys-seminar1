@@ -23,7 +23,6 @@ fitness <- function( path, maze )
   end <- which( maze == 'E', arr.ind = TRUE )
   path_len <- length( dec$path )
   max_path_len <- nrow( maze ) * ncol( maze )
-  max_dist <- ncol( maze ) + nrow( maze )
   
   # Compute fitness score:
   # a) The path goes through walls
@@ -33,7 +32,7 @@ fitness <- function( path, maze )
   # b) End was not reached - fitness based on distance to end
   } else if (tile != 'E') {
     dist <- sum( abs( c(pos$y, pos$x) - end ) )
-    return( -1 * max_path_len * (max_path_len - path_len) - dist )
+    return( -1 * max_path_len * dist )
   
   # c) End was reached - fitness based on path length
   } else {
@@ -48,8 +47,10 @@ mutation <- function( GA, parent, maze )
 {
   mutate <- parent <- as.integer(GA@population[parent,])
   dec <- decode_path( maze, mutate )
+  visited <- dec$visited
   
   if (dec$found) {
+    # TODO? Somehow mutate a found path so that it becomes shorter
     return( mutate )
   }
   
@@ -57,22 +58,11 @@ mutation <- function( GA, parent, maze )
   pos_ix <- if (dec$wall) nrow(coords)-1 else nrow(coords)
   pos <- coords[pos_ix,] # Last valid position
   
-  neigh <- data.frame( dir = c(4, 2, 1, 3),
-                       x = c(rep(pos$x, 2), pos$x+1, pos$x-1),
-                       y = c(pos$y+1, pos$y-1, rep(pos$y, 2)) )
-  neigh <- neigh[1 <= neigh$x & neigh$x <= ncol(maze) & 1 <= neigh$y & neigh$y <= nrow(maze),]
-  neigh_maze_ixs <- (neigh$x-1) * nrow(maze) + neigh$y
-  neigh <- neigh[maze[neigh_maze_ixs] != '#',]
-  
-  dirs <- c()
-  for (ix in 1:nrow( neigh )) {
-    if (nrow( merge(neigh[ix,2:3], coords) ) == 0) {
-      dirs <- c(dirs, neigh$dir[ix])
-    }
-  }
+  # Valid moves
+  dirs <- get_valid_moves( maze, visited, pos )
   
   if (length(dirs) == 0) {
-    # TODO Generate new path / cut off path at some point / mutate at last position with alternative moves / 
+    # TODO Generate new valid path / cut off path at some point / mutate at last position with alternative moves / 
     mutate <- runif( nrow(maze)*ncol(maze), 1, 5 )
     
   } else {
@@ -83,7 +73,7 @@ mutation <- function( GA, parent, maze )
 }
 
 # Read maze
-maze <- maze_to_matrix( maze3 )
+maze <- maze_to_matrix( maze6 )
 max_path_length <- nrow( maze ) * ncol( maze )
 draw_maze( maze )
 
@@ -97,10 +87,10 @@ GA <- ga(type = "real-valued",
          upper = rep(5, max_path_length),
          popSize = 100,
          maxiter = 100,
-         elitism = 0,
-         pmutation = 0.5,
-         pcrossover = 0.5,
-         monitor = function(obj) ga_maze_monitor(obj, maze,  update_rate = 1, sleep = 1))
+         elitism = 1,
+         pmutation = 1,
+         pcrossover = 1,
+         monitor = function(obj) ga_maze_monitor(obj, maze,  update_rate = 10, sleep = 0.1))
 
 plot( GA )
 path_enc <- GA@solution[1,]
