@@ -1,0 +1,156 @@
+---
+title: "Iskanje najkrajše poti z genetskimi algoritmi"
+author: "Janez Tomšič, Jaka Kužner"
+date: "Last compiled on `r format(Sys.time(), '%B %d, %Y')`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+\newpage
+# Introduction
+
+Genetic algorithms try to mimic the nature's evolution process. Using basic principles of evolution, like fitness, mutations and crossovers, they usually generate solutions for optimization and search problems.
+
+Using biological principles such as fitness, selection, mutations and crossovers, through generations or iterations the optimal solution is defined.
+
+A population of candidates is generated each of them could be the solution of the problem. Individually their fitness is evaluated and based on the rating, they are selected. The selected ones are then modified using operations such as mutation and crossovers, to generate a new generation. The process continues until a termination condition or the maximum number of iterations has been reached.
+
+In this assignment we tried using genetic algorithms' optimization properties to optimally solve a maze.
+
+# Measuring the Performance
+## On-line and Off-line Performance
+Two of the most common performance measures for genetic algorithms are On-line and Off-line performances. On-line performance is the mean of the whole generation and off-line performance is the mean of the best individual of each generation.
+For finding the optimal path through the maze the off-line performance is better suited for the task.
+
+## Fitness
+For evaluating the fitness of each individual in the generation we used a custom function. Because the path was encoded as a sequence of directions we had to track the position of the path on the maze itself, to check if the sequence goes through a wall. Of course that is not allowed, so the individual is penalized by stoning their mother to death!!!!!!! The fitness is also based on the distance from the last position to the finish point. The problem is that the finish could be just over a wall and the individual would be evaluated very well, but the actual path required is much longer and also maybe not even in the same direction as the individual. This could be the reason for a premature convergence. Lastly the path length was also taken into account. Since we are searching for the shortest path from start to finish, the path length is a reasonable fitness evaluating property.
+
+
+```{r}
+
+fitness <- function( path, maze )
+{
+  start <- which( maze == 'S', arr.ind = TRUE )[1,]
+  end <- which( maze == 'E', arr.ind = TRUE )[1,]
+  visits <- matrix(0, nrow( maze ), ncol( maze ) )
+  max_path_length <- nrow( maze ) * ncol( maze )
+  
+  path <- as.integer( path )
+  pos <- start
+  curr <- 'S'
+  path_len <- 0
+  
+  for (move in path) {
+    
+    path_len <- path_len + 1
+    
+    # Make a move
+    if (move == 1) {
+      pos['col'] <- pos['col'] + 1
+    }
+    else if (move == 2)
+    {
+      pos['row'] <- pos['row'] - 1
+    }
+    else if (move == 3)
+    {
+      pos['col'] <- pos['col'] - 1
+    }
+    else if (move == 4)
+    {
+      pos['row'] <- pos['row'] + 1
+    }
+    
+    # Check current position
+    curr <- '#'  # Wall by default - for out of bounds cases
+    if (1 <= pos['col'] && pos['col'] <= ncol(maze) && 1 <= pos['row'] && pos['row'] <= nrow(maze))
+    {
+      visits[pos['row'], pos['col']] <- visits[pos['row'], pos['col']] + 1
+      curr <- maze[pos['row'], pos['col']]
+    }
+    
+    # Reached the end or hit a wall
+    if (curr == 'E' || curr == '#') {
+      break
+    }
+  }
+  
+  n_backs <- sum( visits[visits > 0] - 1 )
+  
+  # Compute fitness score:
+  # a) The path goes through walls - fitness based on number of walls hit
+  if (curr == '#') {
+    dist <- sum( abs( pos - end ) )
+    return( -1 * max_path_length * (ncol(maze) + nrow(maze)) * ( max_path_length ** 2 - path_len / (n_backs + 1)) )
+    
+  # b) End was not reached - fitness based on distance to end
+  } else if (curr != 'E') {
+    dist <- sum( abs( pos - end ) )
+    return( -1 * max_path_length * dist )
+  
+  # c) End was reached - fitness based on path length
+  } else {
+    return( -1 * path_len )
+  }
+  
+}
+```
+\newpage
+# Generating the population
+
+The initial population generating function has to be robust yet it has to satisfy the required format. 
+
+
+```{r}
+init_population <- function( object )
+{
+  subj <- gareal_Population( object )
+  subj <- matrix( as.integer(subj), dim(subj) )
+  return(subj)
+}
+```
+
+The first function was as simple as possible. It randomly generated a sequence of moves. The problem with it was that the probability of the sequence actually following a path is next to none and since the moves were completely random the path made no sense. So the function had to be redone to at least take walls and previous positions into account yet remain random and robust.
+
+```{r}
+initPopulationAdvanced <- function(object, maze)
+{
+  lower <- object@lower
+  upper <- object@upper
+  nvars <- length(lower)
+  start <- which( maze == 'S', arr.ind = TRUE )[1,]
+  population <- matrix( as.double(NA), nrow = object@popSize, ncol = nvars )
+  
+  for (i in 1:object@popSize)
+  {
+    pos <- start
+    m <- maze
+    visited <- matrix(as.integer(0), nrow(maze), ncol(maze))
+    for (j in 1:nvars)
+    {
+      move <- make_random_move(pos, m, visited)
+      population[i,j] <- move
+      visited[ pos['row'], pos['col'] ] <- visited[ pos['row'], pos['col'] ] + 1
+      #m[pos['row'], pos['col']] <- '#'
+      pos <- new_position(pos, move)
+    }
+  }
+  return(population)
+}
+```
+
+The second initial population generator was far better. If the maze had no crossroads it was solved in the first iteration. The moves remained random but the acknowledgement of walls and previous positions made a huge difference on the overall fitness of the first generation and also later generations. 
+We experimented with ideas such as building the walls on the current position so we can never visit the same position again, but that turned out not to be a successful solution, since the path can run into a dead end with no escape. So alternatively we decided to have an additional matrix the same size as the maze, but with step counters that increment each time the path crosses it, so that the it can loop back yet prevent going in circles.
+
+
+## R Markdown animation
+
+
+{r,animation.hook="gifski"}
+
+
