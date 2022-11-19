@@ -70,6 +70,7 @@ decode_path <- function( maze, path )
       break
       
     } else if (curr == 'E') {
+      visited[pos['row'], pos['col']] <- TRUE
       found_path <- TRUE
       break
     }
@@ -84,4 +85,25 @@ decode_path <- function( maze, path )
     "coords" = list( "x" = xs, "y" = ys )
   )
   return( ret )
+}
+
+
+# Returns list of valid moves for position in a maze. Valid move is a
+# move that does not hit a wall and does not revisit a tile.
+get_valid_moves <- function( maze, visits, pos )
+{
+  xoff <- c(1, 0, -1, 0)
+  yoff <- c(0, -1, 0, 1)
+  moves <- c()
+  
+  for (dir in 1:4) {
+    y <- pos$y + yoff[dir]
+    x <- pos$x + xoff[dir]
+    
+    in_range <- 1 <= y && y <= nrow(maze) && 1 <= x && x <= ncol(maze)
+    if (in_range && maze[y, x] != '#' && !visits[y, x])
+      moves <- c(moves, dir)
+  }
+  
+  return( moves )
 }

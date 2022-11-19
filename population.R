@@ -30,9 +30,8 @@ make_random_move <- function(pos, m, visited)
   if (length(lv) == 1)
     return(lv[1])
   return(sample(lv,1))
-  
-  #return( sample(available_moves, 1) )
 }
+
 
 new_position <- function(pos, move)
 {
