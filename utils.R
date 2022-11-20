@@ -11,7 +11,7 @@ maze_to_matrix <- function( maze )
 
 
 # Decodes path encoded with numbers
-decode_path <- function( maze, path )
+decode_path <- function( maze, path, allow_backtracking = FALSE )
 {
   start <- which( maze == 'S', arr.ind = TRUE )[1,]
   xs <- start['col']
@@ -28,7 +28,7 @@ decode_path <- function( maze, path )
   for (move in path) {
     
     # Path is only valid until backtracking starts
-    if (visited[pos['row'], pos['col']]) {
+    if (visited[pos['row'], pos['col']] && !allow_backtracking) {
       res <- res[1:length(res)-1]
       xs <- xs[1:length(xs)-1]
       ys <- ys[1:length(ys)-1]
