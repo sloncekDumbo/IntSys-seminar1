@@ -4,7 +4,6 @@ library( GA )
 source( "mazes.R" )
 source( "utils.R" )
 source( "draw.R" )
-source( "operations.R" )
 source( "population.R" )
 
 
@@ -12,11 +11,11 @@ source( "population.R" )
 #     Configuration      #
 ##########################
 
-W_DIST_END <- 0.95
-W_DIST_START <- 0.05
-P_MUT_RANDOM <- 0.3  # Probability of mutation on random move
+W_DIST_END <- 0.2
+W_DIST_START <- 0.8
+P_MUT_RANDOM <- 0.1  # Probability of mutation on random move
 
-DRAW_ALL_PATHS <- TRUE
+DRAW_ALL_PATHS <- FALSE
 DRAW_UPDATE_RATE <- 5
 DRAW_SLEEP <- 0.1
 
@@ -132,14 +131,14 @@ solve_maze <- function( maze_raw )
   GA <- ga(type = "real-valued",
            fitness = function(path) fitness(path, maze ),
            crossover = ga_spCrossover,
-           population = function(obj) initPopulationAdvanced(obj, maze),
+           #population = function(obj) initPopulationAdvanced(obj, maze),
            mutation = function(obj, parent) mutation(obj, parent, maze),
            lower = rep(1, max_path_length),
            upper = rep(5, max_path_length),
            popSize = 100,
            maxiter = 1000,
            run = 100,
-           elitism = 0,
+           elitism = 1,
            pmutation = 0.8,
            pcrossover = 0.2,
            monitor = function(obj) ga_maze_monitor(obj, maze,
@@ -166,7 +165,7 @@ solve_maze <- function( maze_raw )
   return( GA )
 }
 
-GA <- solve_maze( maze6 )
+GA <- solve_maze( maze7_T )
 plot( GA )
 
 
