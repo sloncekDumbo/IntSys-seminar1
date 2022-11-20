@@ -72,7 +72,6 @@ initPopulationAdvanced <- function(object, maze)
       move <- make_random_move(pos, m, visited)
       population[i,j] <- move
       visited[ pos['row'], pos['col'] ] <- visited[ pos['row'], pos['col'] ] + 1
-      #m[pos['row'], pos['col']] <- '#'
       pos <- new_position(pos, move)
     }
   }
