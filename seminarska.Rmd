@@ -22,13 +22,23 @@ A population of candidates is generated each of them could be the solution of th
 
 In this assignment we tried using genetic algorithms' optimization properties to optimally solve a maze.
 
+# Representation
+
+The mazes provided were formatted as an array of strings, so to make it easier for us to use the data and make it more intuitive we converted the format to a matrix of character, where '#' characters represent walls, '.' represent empty spaces, 'T' represent treasures and 'S' and 'E' represent start and finish points of the maze. The format of the path was chosen to be a vector of integers from 1 to 4, each representing it's own direction. At the end the final sequence was converted to a desired format of characters.
+
+# Monitoring the Progress
+
+Since the maze was represented as ASCII characters, it was very hard to quickly understand what was going on. That was especially the case when it was changing every few moments. To make it more visually understandable and pleasing we wrote a monitoring function that plots each iteration in a friendlier format as a grid. 
+
+TODO:
+  dodaj sliko labirinta
+
 # Measuring the Performance
-## On-line and Off-line Performance
-Two of the most common performance measures for genetic algorithms are On-line and Off-line performances. On-line performance is the mean of the whole generation and off-line performance is the mean of the best individual of each generation.
-For finding the optimal path through the maze the off-line performance is better suited for the task.
+
+Two of the most common performance measures for genetic algorithms are the mean of the whole generation and the mean of the best individual in each generation. In our case the latter is better suited since we are looking for the best solution. For evaluating the mean we had to customize the fitness function so it would suit our needs and help us generate an optimal path through the maze.
 
 ## Fitness
-For evaluating the fitness of each individual in the generation we used a custom function. Because the path was encoded as a sequence of directions we had to track the position of the path on the maze itself, to check if the sequence goes through a wall. Of course that is not allowed, so the individual is penalized by stoning their mother to death!!!!!!! The fitness is also based on the distance from the last position to the finish point. The problem is that the finish could be just over a wall and the individual would be evaluated very well, but the actual path required is much longer and also maybe not even in the same direction as the individual. This could be the reason for a premature convergence. Lastly the path length was also taken into account. Since we are searching for the shortest path from start to finish, the path length is a reasonable fitness evaluating property.
+For evaluating the fitness of each individual in the generation we used a custom function. Because the path was encoded as a sequence of directions we had to track the position of the path on the maze itself, to check if the sequence goes through a wall. Of course that is not allowed, so the individual is penalized. The fitness of a sequence of moves is also based on the distance from the last position to the finish point. The problem is that the finish could be just over a wall and the individual would be evaluated very well, but the actual path required is much longer and also maybe not even in the same direction as the sequence of moves is going in. This could be the reason for a premature convergence. Lastly the path length was also taken into account. Since we are searching for the shortest path from start to finish, the path length is a reasonable fitness evaluating property.
 
 
 ```{r}
@@ -100,6 +110,45 @@ fitness <- function( path, maze )
   
 }
 ```
+
+The easiest way of evaluating the fitness of an individual would be to find the shortest path using a different algorithm such as A* search algorithm and then computing the difference between it's solution and our generated sequence. We thought of implementing the fitness function as described above but that would be like building a nuclear power plant to power a coal mine. The genetic algorithm would be useless if we already had the optimal path. Even though it was much slower and usually sub-optimal, our approach gave us a far better understanding of the way genetic algorithms work.
+
+```{r}
+fitness <- function( path, maze )
+{
+  # Decode path and retrieve last position
+  dec <- decode_path( maze, path )
+  coords <- data.frame( dec$coords )
+  pos <- if(dec$wall) coords[nrow(coords)-1,] else coords[nrow(coords),] # Last valid pos
+  pos_last <- coords[nrow(coords),] # Last absolute pos
+  
+  in_bounds <- 1 <= pos_last$x && pos_last$x <= ncol(maze) && 1 <= pos_last$y && pos_last$y <= nrow(maze)
+  tile_last <- if (in_bounds) maze[pos_last$y, pos_last$x] else '#'
+  tile <- maze[pos$y, pos$x]
+  
+  end <- which( maze == 'E', arr.ind = TRUE )
+  start <- which( maze == 'S', arr.ind = TRUE )
+  path_len <- length( dec$path )
+  max_path_len <- nrow( maze ) * ncol( maze )
+  
+  # Compute fitness score:
+  # a) The path goes through walls
+  if (tile == '#') {
+    return( -1 * max_path_len * max_path_len ) # Always worse fit than a path that reaches the end/not hits a wall
+    
+  # b) End was not reached - fitness based on distance to end
+  } else if (tile != 'E') {
+    dist_end <- sum( abs( c(pos$y, pos$x) - end ) )
+    dist_st <- sum( abs( c(pos$y, pos$x) - start ) )
+    return( -(0.9*dist_end + 0.1*(nrow(maze)+ncol(maze)-dist_st)) )
+  
+  # c) End was reached - fitness based on path length
+  } else {
+    return( 1 / path_len )
+  }
+  
+}
+```
 \newpage
 # Generating the population
 
@@ -146,6 +195,11 @@ initPopulationAdvanced <- function(object, maze)
 
 The second initial population generator was far better. If the maze had no crossroads it was solved in the first iteration. The moves remained random but the acknowledgement of walls and previous positions made a huge difference on the overall fitness of the first generation and also later generations. 
 We experimented with ideas such as building the walls on the current position so we can never visit the same position again, but that turned out not to be a successful solution, since the path can run into a dead end with no escape. So alternatively we decided to have an additional matrix the same size as the maze, but with step counters that increment each time the path crosses it, so that the it can loop back yet prevent going in circles.
+
+
+# Mutations
+TODO
+The mutations were also not as simple as you would think. Making a random mutation on a random position is not very helpful in the finding of a solution. The mutations had to be made on the crossroads with the walls and previous positions being taken into account. They can drastically improve the candidate or they could make it worse. Performance is again evaluated by the fitness function.
 
 
 ## R Markdown animation
