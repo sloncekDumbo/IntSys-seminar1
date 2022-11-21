@@ -48,7 +48,7 @@ We chose to represent the path as a vector of integers from 1 to 4, each represe
 
 # Monitoring progress
 
-Since the maze was represented as ASCII characters it was very hard to quickly understand what was going on, particularly during execution of the algorithm. That was especially the case when it was changing every few moments. To make it more visually understandable and pleasing we wrote a monitoring function that plots either the best path or all paths every n-th iteration in a friendlier format as a grid.
+Since the maze was represented as ASCII characters it was very hard to quickly understand what was going on, particularly during execution of the algorithm. To make it more visually understandable and pleasing we wrote a monitoring function that plots either the best path or all paths every n-th iteration in a friendlier format as a grid.
 
 ```{r, echo=FALSE, out.width="75%"}
 include_graphics("img/maze_sample.png")
@@ -258,7 +258,7 @@ decode_path <- function( maze, path, allow_backtracking = FALSE )
 }
 ```
 
-Then we defined our mutation function so that it mutates the move on the last valid position to a random valid move. A valid move is any move that does not go into a wall and does not revisit a tile. The following function was used to get valid moves from a position in given maze.
+Then we defined our mutation function so that it mutates the move on the last valid position to a random valid move. A valid move is any move that does not go into a wall and does not revisit a tile. The following function was used to get valid moves from a position in a given maze.
 
 ```{r}
 get_valid_moves <- function( maze, visits, pos )
@@ -280,7 +280,7 @@ get_valid_moves <- function( maze, visits, pos )
 }
 ```
 
-We use the mentioned functions in the mutation function. The only thing left to do was to determine how mutation should be performed when there are no valid moves available. For our initial implementation we decided to generate a new random path in such cases. 
+We used the mentioned functions in the mutation function. The only thing left to do was to determine how mutation should be performed when there are no valid moves available. For our initial implementation we decided to generate a new random path in such cases. 
 
 ```{r}
 mutation <- function( GA, parent, maze )
@@ -311,8 +311,6 @@ mutation <- function( GA, parent, maze )
 ```
 
 We can see the mutation function in action by setting population size to 1 and running the genetic algorithm on a maze with only one possible valid path. The result is shown below.
-
-TODO Add latest fitness function somewhere here?
 
 ```{r fig.show='animate', warning=FALSE, out.width="50%"}
 maze <- maze_to_matrix( maze3 )
@@ -429,9 +427,64 @@ initPopulationAdvanced <- function(object, maze)
 
 Our initial population generator was far better than the default one. If the maze had no crossroads it was solved in the first iteration. The moves remained random but the acknowledgement of walls and previous positions made a huge difference on the overall fitness of the first generation and also later generations. We experimented with ideas such as building the walls on the current position so we can never visit the same position again, but that turned out not to be a successful solution, since the path can run into a dead end with no escape. So alternatively we decided to have an additional matrix the same size as the maze, but with step counters that increment each time the path crosses it, so that the it can loop back yet prevent going in circles.
 
+# Improving the fitness function
+
+After implementing our mutation and population functions we thought about how we could improve the fitness function. Possible outcomes of the paths have changed since the first implementation - the initial population and mutation functions make sure that there is no backtracking.
+
+We used the same `decode_path` function as in the mutation function to only extract the valid part of the path. After that, the fitness function was calculated based on the last valid position according to distance to not only the end, but also from the start. These distances are weighted with some constant defined before running the algorithm. Our goal here was to reward paths both for exploring far away from the start and not just for moving closer to the end. This proved to be helpful especially in cases where the starting and ending point were close, but the path between them was long.
+
+```{r}
+W_DIST_END <- 0.2
+W_DIST_START <- 0.8
+
+fitness <- function( path, maze )
+{
+  # Decode path and retrieve last position
+  dec <- decode_path( maze, path )
+  coords <- data.frame( dec$coords )
+  pos <- if(dec$wall) coords[nrow(coords)-1,] else coords[nrow(coords),] # Last valid pos
+  tile <- maze[pos$y, pos$x]
+  
+  end <- which( maze == 'E', arr.ind = TRUE )
+  start <- which( maze == 'S', arr.ind = TRUE )
+  path_len <- length( dec$path )
+  max_path_len <- nrow( maze ) * ncol( maze )
+  
+  # Compute fitness score:
+  # a) The path goes through walls
+  if (tile == '#') {
+    return( -1 * max_path_len * max_path_len )
+    
+    # b) End was not reached - fitness based on distance to end and from start
+  } else if (tile != 'E') {
+    dist_end <- sum( abs( c(pos$y, pos$x) - end ) )
+    dist_st <- sum( abs( c(pos$y, pos$x) - start ) )
+    return( -(W_DIST_END*dist_end + W_DIST_START*(nrow(maze)+ncol(maze)-dist_st)) )
+    
+    # c) End was reached - fitness based on path length
+  } else {
+    return( 1 / path_len )
+  }
+}
+```
+
+# Comparison of the implementations
+
+All three improved implementations are more accurate at finding paths than the initial basic implementation. However, there is not much difference in accuracy between the improved implementations. This does not mean that improved population generation and mutation functions are useless, as they greatly reduce the number of iterations required to get a solution.
+
+```{r, echo=FALSE, out.width="100%"}
+include_graphics("img/v2_v3_v4.png")
+```
+
 # Execution time
 
-TODO
+The time complexity is based on three parameters, $a$ and $b$ are the dimensions of the maze, $p$ is the size of the population and $n$ is the number of iterations. Since the size of the path vector is $a * b$, the time complexity would be $O(a * b * p * n)$.
+
+We timed the execution of the genetic algorithm with a fixed population size and number of iterations for different maze sizes. The results are show on the plot below. The line connecting the points resembles a quadratic function, which is compliant with the time complexity we had derived.
+
+```{r, echo=FALSE, out.width="75%"}
+include_graphics("img/exec_time.png")
+```
 
 # Mazes with treasures
 
@@ -615,10 +668,14 @@ solve_maze_treasures <- function( maze_raw )
   return( path )
 }
 
-#path <- solve_maze_treasures( maze7_T )
+path <- solve_maze_treasures( maze7_T )
 ```
 
 
 # Conclusion
 
-Prda smrda veliko mrda.
+The genetic algorithms try to resemble the nature's way of things. Both require trial and error, learning on the fails and always trying to improve. Our algorithm is far from perfect. We learned that the tweaking of the parameters for the algorithm as well as making small corrections in our functions could take decades before getting it absolutely right, and that further improvements never stop. For finding the optimal path through a maze it is more efficient to take a different approach, such as a search algorithm, for example A* algorithm.
+
+One additional improvement we could make would be to also implement a crossover function. We decided against it, since we mainly focused on implementing and improving the mutation function. The idea was to find a meeting point of two paths that take different turns in a crossroad and split them into two. The sub-paths would then be crossed over to create new paths that could potentially reach the same point with fewer steps. This could potentially improve our solution in terms of path length.
+
+To conclude, genetic algorithms can be a powerful asset when used correctly, especially their optimization properties. They are maybe one the most interesting algorithms to watch in process and experiment with, since they appear as if they have their own mind.
